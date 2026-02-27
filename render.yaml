@@ -2,7 +2,7 @@ services:
   - type: web
     name: livequiz-server
     runtime: node
-    buildCommand: npm install && npm run build -w server
+    buildCommand: npm install --include=dev && npm run build -w server
     startCommand: npm start -w server
     plan: free
     envVars:
