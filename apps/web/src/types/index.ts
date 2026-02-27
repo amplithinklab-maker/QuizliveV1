@@ -29,3 +29,16 @@ export interface RoomState {
     aggregatedCountsByOption: Record<string, number>;
     scores: Record<string, { points: number, nickname: string }>;
 }
+
+export interface SerializedRoomState {
+    roomCode: string;
+    hostSocketId: string;
+    playersConnected: number;
+    status: 'waiting' | 'active' | 'leaderboard' | 'finished';
+    currentQuestionIndex: number;
+    timerState: number;
+    totalTimer?: number;
+    answeredPlayerIds: string[];
+    aggregatedCountsByOption: Record<string, number>;
+    scores: Record<string, { points: number, nickname: string }>;
+}

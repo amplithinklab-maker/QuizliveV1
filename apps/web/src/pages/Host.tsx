@@ -1,22 +1,8 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { socket } from '../utils/socket';
-import type { Quiz } from '../types';
+import type { Quiz, SerializedRoomState } from '../types';
 import { Play, ChevronRight, RotateCcw, Maximize, Users, CheckCircle, Trophy, AlarmClock } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
-
-interface SerializedRoomState {
-    roomCode: string;
-    hostSocketId: string;
-    playersConnected: number;
-    status: 'waiting' | 'active' | 'leaderboard' | 'finished';
-    currentQuestionIndex: number;
-    timerState: number;
-    totalTimer?: number;
-    answeredPlayerIds: string[];
-    aggregatedCountsByOption: Record<string, number>;
-    scores: Record<string, { points: number, nickname: string }>;
-}
 
 export default function Host() {
     const { roomCode } = useParams<{ roomCode: string }>();

@@ -1,20 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { socket } from '../utils/socket';
-import type { Quiz } from '../types';
+import type { Quiz, SerializedRoomState } from '../types';
 import { CheckCircle, XCircle, Award } from 'lucide-react';
-
-interface SerializedRoomState {
-    roomCode: string;
-    playersConnected: number;
-    status: 'waiting' | 'active' | 'leaderboard' | 'finished';
-    currentQuestionIndex: number;
-    timerState: number;
-    totalTimer?: number;
-    answeredPlayerIds: string[];
-    aggregatedCountsByOption: Record<string, number>;
-    scores: Record<string, { points: number, nickname: string }>;
-}
 
 export default function Join() {
     const { roomCode } = useParams<{ roomCode: string }>();
