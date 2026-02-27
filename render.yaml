@@ -2,8 +2,8 @@ services:
   - type: web
     name: livequiz-server
     runtime: node
-    buildCommand: cd apps/server && npm install && npm run build
-    startCommand: cd apps/server && npm start
+    buildCommand: npm install && npm run build -w server
+    startCommand: npm start -w server
     plan: free
     envVars:
       - key: PORT
