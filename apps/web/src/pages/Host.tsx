@@ -194,14 +194,16 @@ export default function Host() {
                         const count = room.aggregatedCountsByOption[opt.id] || 0;
                         const pct = totalAnswered > 0 ? (count / maxCount) * 100 : 0;
                         const isCorrect = currentQuestion.correctOptionId === opt.id;
+                        // Hide answer reveal until time is up
+                        const showAnswer = room.timerState === 0;
                         const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
                         const color = colors[idx % colors.length];
 
                         return (
-                            <div key={opt.id} className={`host-bar-row ${isCorrect ? 'is-correct-glow' : ''}`}>
+                            <div key={opt.id} className={`host-bar-row ${isCorrect && showAnswer ? 'is-correct-glow' : ''}`}>
                                 <div className="host-bar-label">
                                     {opt.text}
-                                    {isCorrect && <CheckCircle size={16} className="ml-2 inline text-success" />}
+                                    {(isCorrect && showAnswer) && <CheckCircle size={16} className="ml-2 inline text-success" />}
                                 </div>
                                 <div className="host-bar-track">
                                     <div
@@ -209,7 +211,7 @@ export default function Host() {
                                         style={{
                                             width: `${pct}%`,
                                             backgroundColor: color,
-                                            boxShadow: isCorrect ? `0 0 15px ${color}` : 'none'
+                                            boxShadow: (isCorrect && showAnswer) ? `0 0 15px ${color}` : 'none'
                                         }}
                                     />
                                 </div>
@@ -219,7 +221,7 @@ export default function Host() {
                     })}
                 </div>
 
-                {currentQuestion.explanation && (
+                {(currentQuestion.explanation && room.timerState === 0) && (
                     <div className="host-explanation animate-slide-up">
                         <strong>Explanation:</strong> {currentQuestion.explanation}
                     </div>

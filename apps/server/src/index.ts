@@ -149,8 +149,19 @@ io.on("connection", (socket) => {
     });
 
     // --- DISCONNECT ---
+    const roomDeletionTimers: Record<string, NodeJS.Timeout> = {};
+
     socket.on("disconnect", () => {
-        removeHostRooms(socket.id);
+        // Delayed room removal (60s grace period)
+        const hostRooms = [];
+        // We need to find which rooms this host owned before they disconnected
+        // The store currently has this logic in removeHostRooms but it deletes immediately
+        // So we'll implement a delayed version here or in store
+
+        const timeoutId = setTimeout(() => {
+            removeHostRooms(socket.id);
+            console.log(`Grace period ended for host ${socket.id}. Rooms deleted.`);
+        }, 60000); // 60 seconds
 
         // @ts-ignore
         const joinedRoom = socket.data.roomCode;
