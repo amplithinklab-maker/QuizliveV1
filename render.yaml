@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: livequiz-server
+    runtime: node
+    buildCommand: cd apps/server && npm install && npm run build
+    startCommand: cd apps/server && npm start
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
