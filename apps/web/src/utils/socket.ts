@@ -7,10 +7,16 @@ let _socket: Socket | null = null;
 
 export function getSocket(): Socket {
     if (!_socket) {
+        console.log("Socket init: connecting to", SERVER_URL);
         _socket = io(SERVER_URL, {
             autoConnect: true,
             transports: ["websocket", "polling"],
+            reconnectionAttempts: 5
         });
+
+        _socket.on("connect", () => console.log("Socket connected to:", SERVER_URL));
+        _socket.on("connect_error", (err) => console.error("Socket connect error:", err));
+        _socket.on("disconnect", (reason) => console.warn("Socket disconnected:", reason));
     }
     return _socket;
 }

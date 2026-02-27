@@ -24,7 +24,15 @@ export default function Create() {
         }
 
         setLoading(true);
+
+        // Safety timeout: if server doesn't respond in 15s, show error
+        const timeoutId = setTimeout(() => {
+            setLoading(false);
+            setError("The server is taking too long to respond. Please check if the Render URL is correct and the service is active.");
+        }, 15000);
+
         socket.emit('host_create_room', quiz, (response: any) => {
+            clearTimeout(timeoutId);
             setLoading(false);
             if (response.success) {
                 navigate(`/host/${response.roomCode}`, { state: { quiz } });

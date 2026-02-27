@@ -20,6 +20,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Health check for Render
+app.get("/", (req, res) => {
+    res.send("LiveQuizV1 Server is active!");
+});
+
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
@@ -117,7 +122,7 @@ io.on("connection", (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
     console.log(`LiveQuizV1 Server running on port ${PORT}`);
 });
