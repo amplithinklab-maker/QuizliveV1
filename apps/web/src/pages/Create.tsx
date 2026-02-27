@@ -7,11 +7,11 @@ import type { Quiz, Question } from '../types';
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
 const INITIAL_QUIZ: Quiz = {
-    title: "My New Quiz",
+    title: "Mi Nuevo Quiz",
     questions: [
         {
             id: generateId(),
-            text: "How many planets are in our solar system?",
+            text: "¿Cuántos planetas hay en nuestro sistema solar?",
             options: [
                 { id: generateId(), text: "7" },
                 { id: generateId(), text: "8" },
@@ -19,7 +19,7 @@ const INITIAL_QUIZ: Quiz = {
             ],
             correctOptionId: "",
             durationSeconds: 30,
-            explanation: "Pluto was reclassified as a dwarf planet in 2006."
+            explanation: "Plutón fue reclasificado como planeta enano en 2006."
         }
     ]
 };
@@ -41,20 +41,20 @@ export default function Create() {
     const handleStart = () => {
         setError(null);
         if (quiz.questions.length === 0) {
-            setError("Quiz must have at least one question.");
+            setError("El quiz debe tener al menos una pregunta.");
             return;
         }
 
         const invalidQuestion = quiz.questions.find(q => q.options.length < 2);
         if (invalidQuestion) {
-            setError(`Question "${invalidQuestion.text}" must have at least 2 options.`);
+            setError(`La pregunta "${invalidQuestion.text}" debe tener al menos 2 opciones.`);
             return;
         }
 
         setLoading(true);
         const timeoutId = setTimeout(() => {
             setLoading(false);
-            setError("The server is taking too long to respond. Please check the connection.");
+            setError("El servidor está tardando mucho en responder. Por favor, revisa la conexión.");
         }, 15000);
 
         socket.emit('host_create_room', quiz, (response: any) => {
@@ -63,7 +63,7 @@ export default function Create() {
             if (response.success) {
                 navigate(`/host/${response.roomCode}`, { state: { quiz } });
             } else {
-                setError("Failed to create room. Please try again.");
+                setError("Error al crear la sala. Inténtalo de nuevo.");
             }
         });
     };
@@ -128,16 +128,16 @@ export default function Create() {
             <div className="create-header">
                 <button onClick={() => navigate('/')} className="btn-back">
                     <ArrowLeft size={18} />
-                    <span>Home</span>
+                    <span>Inicio</span>
                 </button>
 
                 <div className="create-header-title">
-                    <h2>Quiz Editor</h2>
+                    <h2>Editor de Quiz</h2>
                 </div>
 
                 <button onClick={handleStart} className="btn btn-primary" disabled={loading || quiz.questions.length === 0}>
                     <Play size={18} />
-                    <span>{loading ? '...' : 'Create & Present'}</span>
+                    <span>{loading ? '...' : 'Crear y Presentar'}</span>
                 </button>
             </div>
 
@@ -150,15 +150,15 @@ export default function Create() {
                         className="quiz-title-input"
                         value={quiz.title}
                         onChange={(e) => setQuiz({ ...quiz, title: e.target.value })}
-                        placeholder="Quiz Title..."
+                        placeholder="Título del Quiz..."
                     />
 
                     <div className="questions-list">
                         {quiz.questions.map((q, qIdx) => (
                             <div key={q.id} className="question-card animate-fade-in">
                                 <div className="q-card-header">
-                                    <span className="q-number">Question {qIdx + 1}</span>
-                                    <button onClick={() => removeQuestion(qIdx)} className="btn-icon-danger" title="Remove Question">
+                                    <span className="q-number">Pregunta {qIdx + 1}</span>
+                                    <button onClick={() => removeQuestion(qIdx)} className="btn-icon-danger" title="Eliminar Pregunta">
                                         <Trash2 size={18} />
                                     </button>
                                 </div>
@@ -167,7 +167,7 @@ export default function Create() {
                                     className="q-text-input"
                                     value={q.text}
                                     onChange={(e) => updateQuestion(qIdx, { text: e.target.value })}
-                                    placeholder="What is your question?"
+                                    placeholder="¿Cuál es tu pregunta?"
                                     rows={2}
                                 />
 
@@ -177,7 +177,7 @@ export default function Create() {
                                             <button
                                                 className="correct-toggle"
                                                 onClick={() => updateQuestion(qIdx, { correctOptionId: opt.id })}
-                                                title="Mark as correct"
+                                                title="Marcar como correcta"
                                             >
                                                 <CheckCircle2 size={20} />
                                             </button>
@@ -185,7 +185,7 @@ export default function Create() {
                                                 type="text"
                                                 value={opt.text}
                                                 onChange={(e) => updateOption(qIdx, oIdx, e.target.value)}
-                                                placeholder={`Option ${oIdx + 1}`}
+                                                placeholder={`Opción ${oIdx + 1}`}
                                             />
                                             <button
                                                 className="remove-option"
@@ -199,7 +199,7 @@ export default function Create() {
                                     {q.options.length < 6 && (
                                         <button className="add-option-btn" onClick={() => addOption(qIdx)}>
                                             <Plus size={16} />
-                                            <span>Add Option</span>
+                                            <span>Agregar Opción</span>
                                         </button>
                                     )}
                                 </div>
@@ -207,7 +207,7 @@ export default function Create() {
                                 <div className="q-card-footer">
                                     <div className="q-setting">
                                         <Clock size={16} />
-                                        <span>Timer:</span>
+                                        <span>Tiempo:</span>
                                         <select
                                             value={q.durationSeconds}
                                             onChange={(e) => updateQuestion(qIdx, { durationSeconds: parseInt(e.target.value) })}
@@ -223,7 +223,7 @@ export default function Create() {
                                     <div className="q-setting flex-1">
                                         <input
                                             type="text"
-                                            placeholder="Explanation (Optional)..."
+                                            placeholder="Explicación (Opcional)..."
                                             value={q.explanation || ''}
                                             onChange={(e) => updateQuestion(qIdx, { explanation: e.target.value })}
                                             className="explanation-input"
@@ -236,14 +236,14 @@ export default function Create() {
 
                     <button className="add-question-btn" onClick={addQuestion}>
                         <Plus size={20} />
-                        <span>Add New Question</span>
+                        <span>Agregar Nueva Pregunta</span>
                     </button>
                 </div>
             </div>
 
             <div className="save-status">
                 <Save size={14} />
-                <span>Changes saved locally</span>
+                <span>Cambios guardados localmente</span>
             </div>
 
             <footer className="footer-credits">

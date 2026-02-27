@@ -42,7 +42,7 @@ export default function Join() {
                 setQuiz(response.quiz);
                 setMyStudentId(response.studentId);
             } else {
-                setError(response.error || 'Room not found');
+                setError(response.error || 'Sala no encontrada');
             }
         });
     };
@@ -57,9 +57,9 @@ export default function Join() {
         return (
             <div className="container min-h-screen flex flex-col items-center justify-center text-center animate-fade-in">
                 <div className="card p-8 max-w-md w-full">
-                    <h1 className="text-error mb-4 font-bold text-2xl">Cannot Join</h1>
+                    <h1 className="text-error mb-4 font-bold text-2xl">No se pudo entrar</h1>
                     <p className="text-muted mb-6">{error}</p>
-                    <button onClick={() => navigate('/')} className="btn btn-secondary btn-block">Return Home</button>
+                    <button onClick={() => navigate('/')} className="btn btn-secondary btn-block">Volver al inicio</button>
                 </div>
             </div>
         );
@@ -69,12 +69,12 @@ export default function Join() {
         return (
             <div className="container min-h-screen flex flex-col items-center justify-center animate-fade-in">
                 <div className="card w-full max-w-md">
-                    <h1 className="text-center font-bold text-2xl mb-2">Join Activity</h1>
-                    <p className="text-center text-muted mb-8">Room: <strong>{roomCode}</strong></p>
+                    <h1 className="text-center font-bold text-2xl mb-2">Unirse a la Actividad</h1>
+                    <p className="text-center text-muted mb-8">Sala: <strong>{roomCode}</strong></p>
                     <form onSubmit={handleJoin} className="flex flex-col gap-6">
                         <input
                             type="text"
-                            placeholder="Your Nickname"
+                            placeholder="Tu Apodo"
                             className="input text-center text-xl"
                             value={studentName}
                             onChange={(e) => setStudentName(e.target.value)}
@@ -83,7 +83,7 @@ export default function Join() {
                             required
                         />
                         <button type="submit" className="btn btn-primary btn-large btn-block" disabled={!studentName.trim()}>
-                            Enter
+                            Entrar
                         </button>
                     </form>
                 </div>
@@ -100,8 +100,8 @@ export default function Join() {
                             <div className="w-8 h-8 bg-primary rounded-full" />
                         </div>
                     </div>
-                    <h2 className="text-2xl font-bold mb-2">You're in, {studentName}!</h2>
-                    <p className="text-muted text-lg">Waiting for the teacher to start...</p>
+                    <h2 className="text-2xl font-bold mb-2">¡Ya estás dentro, {studentName}!</h2>
+                    <p className="text-muted text-lg">Esperando a que el profesor comience...</p>
                 </div>
             </div>
         );
@@ -113,9 +113,12 @@ export default function Join() {
             <div className="container min-h-screen flex flex-col items-center justify-center text-center animate-fade-in">
                 <div className="card p-8 max-w-md w-full">
                     <Award size={64} className="mx-auto mb-6 text-primary" />
-                    <h2 className="text-3xl font-bold mb-2">Well Done!</h2>
-                    <p className="text-xl mb-8">Your final score: <strong className="text-primary">{myScore?.points || 0}</strong> pts</p>
-                    <button onClick={() => navigate('/')} className="btn btn-secondary btn-block">Exit</button>
+                    <h2 className="text-3xl font-bold mb-2">¡Bien hecho!</h2>
+                    <p className="text-xl mb-8">Tu puntaje final: <strong className="text-primary">{myScore?.points || 0}</strong> pts</p>
+                    <button onClick={() => navigate('/')} className="btn btn-secondary btn-block">Salir</button>
+                    <footer className="footer-credits" style={{ marginTop: '2rem' }}>
+                        Con cariño, Italo
+                    </footer>
                 </div>
             </div>
         );
@@ -135,22 +138,25 @@ export default function Join() {
                         {isCorrect ? (
                             <>
                                 <CheckCircle size={80} className="mx-auto mb-6 text-success" />
-                                <h1 className="text-4xl font-black mb-2 text-success">CORRECT!</h1>
+                                <h1 className="text-4xl font-black mb-2 text-success">¡CORRECTO!</h1>
                             </>
                         ) : (
                             <>
                                 <XCircle size={80} className="mx-auto mb-6 text-error" />
-                                <h1 className="text-4xl font-black mb-2 text-error">WRONG</h1>
+                                <h1 className="text-4xl font-black mb-2 text-error">INCORRECTO</h1>
                             </>
                         )}
                         <div className="mt-8 p-6 bg-white rounded-xl shadow-sm border border-border">
-                            <p className="text-muted mb-1 font-semibold uppercase tracking-wider text-sm">Question Points</p>
+                            <p className="text-muted mb-1 font-semibold uppercase tracking-wider text-sm">Puntos de la Pregunta</p>
                             <p className="text-3xl font-bold text-primary mb-4">{myScore.points} pts</p>
                             {currentQuestion.explanation && (
                                 <p className="text-left text-sm border-t pt-4 mt-4 italic">"{currentQuestion.explanation}"</p>
                             )}
                         </div>
-                        <p className="mt-8 text-muted animate-pulse">Stay tuned for the next one...</p>
+                        <p className="mt-8 text-muted animate-pulse">Prepárate para la siguiente...</p>
+                        <footer className="footer-credits" style={{ marginTop: '2rem' }}>
+                            Con cariño, Italo
+                        </footer>
                     </div>
                 </div>
             );
@@ -164,9 +170,12 @@ export default function Join() {
                             <div className="w-20 h-20 bg-success-light rounded-full flex items-center justify-center mx-auto mb-6">
                                 <CheckCircle size={40} className="text-success" />
                             </div>
-                            <h2 className="text-2xl font-bold">Answer Received!</h2>
+                            <h2 className="text-2xl font-bold">¡Respuesta Recibida!</h2>
                         </div>
-                        <p className="text-muted text-lg">Waiting for the timer to end...</p>
+                        <p className="text-muted text-lg">Esperando a que termine el tiempo...</p>
+                        <footer className="footer-credits" style={{ marginTop: '2rem' }}>
+                            Con cariño, Italo
+                        </footer>
                     </div>
                 </div>
             );
@@ -182,7 +191,7 @@ export default function Join() {
 
                     <div className="mb-10">
                         <span className="text-xs font-bold text-muted uppercase tracking-widest mb-2 block">
-                            Question {room.currentQuestionIndex + 1} of {quiz.questions.length}
+                            Pregunta {room.currentQuestionIndex + 1} de {quiz.questions.length}
                         </span>
                         <h1 className="text-2xl md:text-3xl font-bold leading-tight">
                             {currentQuestion.text}

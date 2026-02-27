@@ -77,22 +77,22 @@ export default function Host() {
                         <div className="host-qr-section">
                             <div className="host-qr-card">
                                 <QRCodeSVG value={joinUrl} size={280} level="H" includeMargin={true} />
-                                <div className="host-qr-hint">Scan to Join</div>
+                                <div className="host-qr-hint">Escanea para unirte</div>
                             </div>
                         </div>
 
                         <div className="host-waiting-content">
                             <h1 className="host-room-code">{roomCode}</h1>
-                            <p className="host-room-label">Room PIN</p>
+                            <p className="host-room-label">PIN de la Sala</p>
                             <div className="host-join-url"><span>{joinUrl}</span></div>
                             <div className="host-player-count">
                                 <Users size={24} />
                                 <span className="host-player-number">{room?.playersConnected || 0}</span>
-                                <span className="host-player-label">connected</span>
+                                <span className="host-player-label">conectados</span>
                             </div>
                             <button onClick={handleStart} className="btn btn-primary btn-large host-start-btn" disabled={!room || room.playersConnected === 0}>
                                 <Play size={22} />
-                                <span>Start Activity</span>
+                                <span>Empezar Actividad</span>
                             </button>
                         </div>
                     </div>
@@ -109,7 +109,7 @@ export default function Host() {
                 <div className="host-leaderboard-view">
                     <div className="host-leaderboard-container">
                         <Trophy size={64} className="host-leaderboard-trophy" />
-                        <h1 className="host-leaderboard-title">Leaderboard</h1>
+                        <h1 className="host-leaderboard-title">Tabla de Posiciones</h1>
                         <div className="host-leaderboard-list">
                             {sortedLeaderboard.map((player, idx) => (
                                 <div key={player.id} className="host-leaderboard-item" style={{ animationDelay: `${idx * 0.1}s` }}>
@@ -118,10 +118,10 @@ export default function Host() {
                                     <span className="host-leaderboard-points">{player.points} pts</span>
                                 </div>
                             ))}
-                            {sortedLeaderboard.length === 0 && <p className="text-muted">No scores yet</p>}
+                            {sortedLeaderboard.length === 0 && <p className="text-muted">Sin puntajes todavía</p>}
                         </div>
                         <button onClick={handleNext} className="btn btn-primary btn-large mt-8">
-                            <span>Next Question</span>
+                            <span>Siguiente Pregunta</span>
                             <ChevronRight size={20} />
                         </button>
                     </div>
@@ -138,7 +138,7 @@ export default function Host() {
                 <div className="host-finished">
                     <div className="host-finished-content">
                         <CheckCircle size={64} className="host-finished-icon" />
-                        <h1>Final Results</h1>
+                        <h1>Resultados Finales</h1>
                         <div className="host-final-podium">
                             {sortedLeaderboard.slice(0, 3).map((player, idx) => (
                                 <div key={player.id} className="host-podium-item">
@@ -153,9 +153,9 @@ export default function Host() {
                         <div className="host-finished-actions">
                             <button onClick={handleRestart} className="btn btn-primary btn-large">
                                 <RotateCcw size={20} />
-                                <span>Play Again</span>
+                                <span>Jugar de Nuevo</span>
                             </button>
-                            <button onClick={() => navigate('/')} className="btn btn-secondary btn-large">Exit</button>
+                            <button onClick={() => navigate('/')} className="btn btn-secondary btn-large">Salir</button>
                         </div>
                     </div>
                 </div>
@@ -180,7 +180,7 @@ export default function Host() {
             <div className="host-active">
                 <div className="host-question-header">
                     <div className="host-question-meta">
-                        <span className="host-question-number">Question {room.currentQuestionIndex + 1} / {quiz.questions.length}</span>
+                        <span className="host-question-number">Pregunta {room.currentQuestionIndex + 1} / {quiz.questions.length}</span>
                         <div className="host-timer-display">
                             <AlarmClock size={20} />
                             <span>{room.timerState}s</span>
@@ -223,18 +223,18 @@ export default function Host() {
 
                 {(currentQuestion.explanation && room.timerState === 0) && (
                     <div className="host-explanation animate-slide-up">
-                        <strong>Explanation:</strong> {currentQuestion.explanation}
+                        <strong>Explicación:</strong> {currentQuestion.explanation}
                     </div>
                 )}
 
                 <div className="host-status-bar">
                     <div className="host-status-left">
                         <Users size={18} />
-                        <span>{totalAnswered} / {room.playersConnected} responded</span>
+                        <span>{totalAnswered} / {room.playersConnected} respondieron</span>
                     </div>
                     <div className="host-status-right">
                         <button onClick={handleNext} className="btn btn-primary btn-large">
-                            <span>Show Leaderboard</span>
+                            <span>Ver Posiciones</span>
                             <ChevronRight size={20} />
                         </button>
                     </div>

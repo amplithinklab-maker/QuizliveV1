@@ -17,10 +17,10 @@ export default function Home() {
         <div className="page-home animate-fade-in">
             <div className="home-content">
                 <h1 className="home-logo">LiveQuiz</h1>
-                <p className="home-subtitle">Real-time formative assessment</p>
+                <p className="home-subtitle">Evaluación formativa en tiempo real</p>
 
                 <div className="home-join-card">
-                    <h2>Join an Activity</h2>
+                    <h2>Unirse a una Actividad</h2>
                     <form onSubmit={handleJoin}>
                         <input
                             type="text"
@@ -37,12 +37,12 @@ export default function Home() {
                             disabled={roomCode.length !== 6}
                         >
                             <LogIn size={20} />
-                            <span>Join</span>
+                            <span>Entrar</span>
                         </button>
                     </form>
                 </div>
 
-                <div className="home-divider"><span>or</span></div>
+                <div className="home-divider"><span>o</span></div>
 
                 <button
                     onClick={() => navigate('/create')}
@@ -50,7 +50,7 @@ export default function Home() {
                     style={{ marginTop: '0.75rem' }}
                 >
                     <Plus size={18} />
-                    <span>Create Activity (Host)</span>
+                    <span>Crear Actividad (Anfitrión)</span>
                 </button>
             </div>
             <footer className="footer-credits">
