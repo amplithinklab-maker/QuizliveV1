@@ -3,6 +3,7 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { socket } from '../utils/socket';
 import type { Quiz, SerializedRoomState } from '../types';
 import { Play, ChevronRight, RotateCcw, Maximize, Users, CheckCircle, Trophy, AlarmClock } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function Host() {
     const { roomCode } = useParams<{ roomCode: string }>();
