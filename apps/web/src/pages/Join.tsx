@@ -10,6 +10,7 @@ interface SerializedRoomState {
     status: 'waiting' | 'active' | 'leaderboard' | 'finished';
     currentQuestionIndex: number;
     timerState: number;
+    totalTimer?: number;
     answeredPlayerIds: string[];
     aggregatedCountsByOption: Record<string, number>;
     scores: Record<string, { points: number, nickname: string }>;
