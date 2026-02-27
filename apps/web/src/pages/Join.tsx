@@ -2,15 +2,17 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { socket } from '../utils/socket';
 import type { Quiz } from '../types';
+import { CheckCircle, XCircle, Award } from 'lucide-react';
 
 interface SerializedRoomState {
     roomCode: string;
     playersConnected: number;
-    status: 'waiting' | 'active' | 'finished';
+    status: 'waiting' | 'active' | 'leaderboard' | 'finished';
     currentQuestionIndex: number;
     timerState: number;
     answeredPlayerIds: string[];
     aggregatedCountsByOption: Record<string, number>;
+    scores: Record<string, { points: number, nickname: string }>;
 }
 
 export default function Join() {
@@ -23,28 +25,33 @@ export default function Join() {
 
     const [room, setRoom] = useState<SerializedRoomState | null>(null);
     const [quiz, setQuiz] = useState<Quiz | null>(null);
-
-    const [studentId] = useState(() => Math.random().toString(36).substring(2, 10));
+    const [myStudentId, setMyStudentId] = useState<string | null>(null);
+    const [lastAnswerId, setLastAnswerId] = useState<string | null>(null);
 
     useEffect(() => {
         socket.on('room_state_update', (updatedRoom: SerializedRoomState) => {
             setRoom(updatedRoom);
+            // Reset answer for next question
+            if (updatedRoom.status === 'active' && room?.currentQuestionIndex !== updatedRoom.currentQuestionIndex) {
+                setLastAnswerId(null);
+            }
         });
 
         return () => {
             socket.off('room_state_update');
         };
-    }, []);
+    }, [room?.currentQuestionIndex]);
 
     const handleJoin = (e: FormEvent) => {
         e.preventDefault();
         if (!studentName.trim() || !roomCode) return;
 
-        socket.emit('player_join', roomCode, (response: any) => {
+        socket.emit('player_join', roomCode, studentName, (response: any) => {
             if (response.success) {
                 setHasJoined(true);
                 setRoom(response.room);
                 setQuiz(response.quiz);
+                setMyStudentId(response.studentId);
             } else {
                 setError(response.error || 'Room not found');
             }
@@ -52,54 +59,41 @@ export default function Join() {
     };
 
     const handleAnswer = (optionId: string) => {
-        if (!roomCode || room?.status !== 'active') return;
-        socket.emit('player_answer', { roomCode, studentId, optionId });
+        if (!roomCode || room?.status !== 'active' || !myStudentId) return;
+        setLastAnswerId(optionId);
+        socket.emit('player_answer', { roomCode, studentId: myStudentId, optionId });
     };
 
-    // Error
     if (error) {
         return (
             <div className="container min-h-screen flex flex-col items-center justify-center text-center animate-fade-in">
                 <div className="card p-8 max-w-md w-full">
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--color-error)' }}>
-                        Cannot Join
-                    </h1>
+                    <h1 className="text-error mb-4 font-bold text-2xl">Cannot Join</h1>
                     <p className="text-muted mb-6">{error}</p>
-                    <button onClick={() => navigate('/')} className="btn btn-secondary btn-block">
-                        Return Home
-                    </button>
+                    <button onClick={() => navigate('/')} className="btn btn-secondary btn-block">Return Home</button>
                 </div>
             </div>
         );
     }
 
-    // Name Entry
     if (!hasJoined) {
         return (
             <div className="container min-h-screen flex flex-col items-center justify-center animate-fade-in">
                 <div className="card w-full max-w-md">
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: 700, textAlign: 'center', marginBottom: '0.5rem' }}>
-                        Join Activity
-                    </h1>
-                    <p className="text-center text-muted mb-6">Room: <strong>{roomCode}</strong></p>
-
-                    <form onSubmit={handleJoin} className="flex flex-col gap-4">
+                    <h1 className="text-center font-bold text-2xl mb-2">Join Activity</h1>
+                    <p className="text-center text-muted mb-8">Room: <strong>{roomCode}</strong></p>
+                    <form onSubmit={handleJoin} className="flex flex-col gap-6">
                         <input
                             type="text"
-                            placeholder="Your Name"
-                            className="input text-center"
-                            style={{ fontSize: '1.125rem' }}
+                            placeholder="Your Nickname"
+                            className="input text-center text-xl"
                             value={studentName}
                             onChange={(e) => setStudentName(e.target.value)}
-                            maxLength={20}
+                            maxLength={15}
                             autoFocus
                             required
                         />
-                        <button
-                            type="submit"
-                            className="btn btn-primary btn-large btn-block"
-                            disabled={!studentName.trim()}
-                        >
+                        <button type="submit" className="btn btn-primary btn-large btn-block" disabled={!studentName.trim()}>
                             Enter
                         </button>
                     </form>
@@ -108,98 +102,110 @@ export default function Join() {
         );
     }
 
-    // Waiting
     if (room?.status === 'waiting') {
         return (
             <div className="container min-h-screen flex flex-col items-center justify-center text-center animate-fade-in">
                 <div className="card p-8 max-w-md w-full">
-                    <div className="animate-pulse mb-6">
-                        <div style={{
-                            width: '4rem', height: '4rem',
-                            backgroundColor: 'var(--color-primary-light)',
-                            borderRadius: '50%',
-                            margin: '0 auto',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                        }}>
-                            <div style={{
-                                width: '1.5rem', height: '1.5rem',
-                                backgroundColor: 'var(--color-primary)',
-                                borderRadius: '50%'
-                            }} />
+                    <div className="animate-pulse mb-8">
+                        <div className="w-20 h-20 bg-primary-light rounded-full flex items-center justify-center mx-auto">
+                            <div className="w-8 h-8 bg-primary rounded-full" />
                         </div>
                     </div>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>You're in!</h2>
-                    <p className="text-muted" style={{ fontSize: '1.125rem' }}>Esperando inicio de la actividad...</p>
+                    <h2 className="text-2xl font-bold mb-2">You're in, {studentName}!</h2>
+                    <p className="text-muted text-lg">Waiting for the teacher to start...</p>
                 </div>
             </div>
         );
     }
 
-    // Finished
     if (room?.status === 'finished') {
+        const myScore = myStudentId ? room.scores[myStudentId] : null;
         return (
             <div className="container min-h-screen flex flex-col items-center justify-center text-center animate-fade-in">
                 <div className="card p-8 max-w-md w-full">
-                    <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '0.75rem' }}>Activity Finished</h2>
-                    <p className="text-muted mb-8" style={{ fontSize: '1.125rem' }}>Gracias por participar.</p>
-                    <button onClick={() => navigate('/')} className="btn btn-secondary btn-block">Leave</button>
+                    <Award size={64} className="mx-auto mb-6 text-primary" />
+                    <h2 className="text-3xl font-bold mb-2">Well Done!</h2>
+                    <p className="text-xl mb-8">Your final score: <strong className="text-primary">{myScore?.points || 0}</strong> pts</p>
+                    <button onClick={() => navigate('/')} className="btn btn-secondary btn-block">Exit</button>
                 </div>
             </div>
         );
     }
 
-    // Active — Question
-    if (room?.status === 'active' && quiz) {
+    if (room?.status === 'active' || room?.status === 'leaderboard') {
+        if (!quiz) return null;
         const currentQuestion = quiz.questions[room.currentQuestionIndex];
-        const hasAnswered = Array.isArray(room.answeredPlayerIds) && room.answeredPlayerIds.includes(studentId);
+        const hasAnswered = room.answeredPlayerIds.includes(myStudentId || '');
+        const myScore = myStudentId ? room.scores[myStudentId] : { points: 0 };
+
+        if (room.status === 'leaderboard') {
+            const isCorrect = lastAnswerId === currentQuestion.correctOptionId;
+            return (
+                <div className={`container min-h-screen flex flex-col items-center justify-center text-center animate-fade-in ${isCorrect ? 'bg-success-light' : 'bg-error-light'}`} style={{ backgroundColor: isCorrect ? '#f0fdf4' : '#fef2f2' }}>
+                    <div className="p-8 max-w-md w-full">
+                        {isCorrect ? (
+                            <>
+                                <CheckCircle size={80} className="mx-auto mb-6 text-success" />
+                                <h1 className="text-4xl font-black mb-2 text-success">CORRECT!</h1>
+                            </>
+                        ) : (
+                            <>
+                                <XCircle size={80} className="mx-auto mb-6 text-error" />
+                                <h1 className="text-4xl font-black mb-2 text-error">WRONG</h1>
+                            </>
+                        )}
+                        <div className="mt-8 p-6 bg-white rounded-xl shadow-sm border border-border">
+                            <p className="text-muted mb-1 font-semibold uppercase tracking-wider text-sm">Question Points</p>
+                            <p className="text-3xl font-bold text-primary mb-4">{myScore.points} pts</p>
+                            {currentQuestion.explanation && (
+                                <p className="text-left text-sm border-t pt-4 mt-4 italic">"{currentQuestion.explanation}"</p>
+                            )}
+                        </div>
+                        <p className="mt-8 text-muted animate-pulse">Stay tuned for the next one...</p>
+                    </div>
+                </div>
+            );
+        }
 
         if (hasAnswered) {
             return (
                 <div className="container min-h-screen flex flex-col items-center justify-center text-center animate-fade-in">
                     <div className="max-w-md w-full">
-                        <div style={{ marginBottom: '2rem' }}>
-                            <div style={{
-                                width: '5rem', height: '5rem',
-                                backgroundColor: '#ecfdf5',
-                                borderRadius: '50%',
-                                margin: '0 auto 1.5rem',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center'
-                            }}>
-                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M5 13l4 4L19 7" />
-                                </svg>
+                        <div className="mb-8">
+                            <div className="w-20 h-20 bg-success-light rounded-full flex items-center justify-center mx-auto mb-6">
+                                <CheckCircle size={40} className="text-success" />
                             </div>
-                            <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Respuesta registrada</h2>
+                            <h2 className="text-2xl font-bold">Answer Received!</h2>
                         </div>
-                        <p className="text-muted">Esperando al resto de la clase...</p>
+                        <p className="text-muted text-lg">Waiting for the timer to end...</p>
                     </div>
                 </div>
             );
         }
 
         return (
-            <div className="container min-h-screen flex flex-col" style={{ padding: '1.5rem' }}>
-                <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full pt-8">
-                    <div className="mb-6">
-                        <span style={{
-                            fontSize: '0.813rem', fontWeight: 600,
-                            color: 'var(--color-text-muted)',
-                            textTransform: 'uppercase' as const, letterSpacing: '0.08em',
-                            display: 'block', marginBottom: '0.5rem'
-                        }}>
+            <div className="container min-h-screen flex flex-col p-6 animate-fade-in">
+                <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full pt-4">
+                    {/* Timer bar for player too */}
+                    <div className="w-full h-1 bg-border rounded-full overflow-hidden mb-8">
+                        <div className="h-full bg-primary transition-all underline" style={{ width: `${(room.timerState / (room.totalTimer || 30)) * 100}%` }} />
+                    </div>
+
+                    <div className="mb-10">
+                        <span className="text-xs font-bold text-muted uppercase tracking-widest mb-2 block">
                             Question {room.currentQuestionIndex + 1} of {quiz.questions.length}
                         </span>
-                        <h1 style={{ fontSize: 'clamp(1.5rem, 5vw, 2.25rem)', fontWeight: 700, lineHeight: 1.3 }}>
+                        <h1 className="text-2xl md:text-3xl font-bold leading-tight">
                             {currentQuestion.text}
                         </h1>
                     </div>
 
-                    <div className="flex flex-col gap-4 mt-auto mb-16">
+                    <div className="grid grid-cols-1 gap-4 mb-20">
                         {currentQuestion.options.map((opt) => (
                             <button
                                 key={opt.id}
                                 onClick={() => handleAnswer(opt.id)}
-                                className="btn btn-secondary join-option-btn"
+                                className="btn btn-secondary player-option-btn text-lg py-6"
                             >
                                 {opt.text}
                             </button>

@@ -1,19 +1,21 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { socket } from '../utils/socket';
 import type { Quiz } from '../types';
-import { Play, ChevronRight, RotateCcw, Maximize, Users, CheckCircle } from 'lucide-react';
+import { Play, ChevronRight, RotateCcw, Maximize, Users, CheckCircle, Trophy, AlarmClock } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface SerializedRoomState {
     roomCode: string;
     hostSocketId: string;
     playersConnected: number;
-    status: 'waiting' | 'active' | 'finished';
+    status: 'waiting' | 'active' | 'leaderboard' | 'finished';
     currentQuestionIndex: number;
     timerState: number;
+    totalTimer?: number;
     answeredPlayerIds: string[];
     aggregatedCountsByOption: Record<string, number>;
+    scores: Record<string, { points: number, nickname: string }>;
 }
 
 export default function Host() {
@@ -67,6 +69,14 @@ export default function Host() {
         }
     }, []);
 
+    const sortedLeaderboard = useMemo(() => {
+        if (!room?.scores) return [];
+        return Object.entries(room.scores)
+            .map(([id, data]) => ({ id, ...data }))
+            .sort((a, b) => b.points - a.points)
+            .slice(0, 5); // Top 5
+    }, [room?.scores]);
+
     if (!quiz || !roomCode) return null;
 
     const joinUrl = `${window.location.origin}${window.location.pathname.includes('/QuizliveV1/') ? '/QuizliveV1' : ''}/#/join/${roomCode}`;
@@ -77,54 +87,59 @@ export default function Host() {
             <div className="host-page animate-fade-in">
                 <div className="host-waiting">
                     <div className="host-waiting-layout">
-                        {/* QR Code Section */}
                         <div className="host-qr-section">
                             <div className="host-qr-card">
-                                <QRCodeSVG
-                                    value={joinUrl}
-                                    size={280}
-                                    level="H"
-                                    includeMargin={true}
-                                />
+                                <QRCodeSVG value={joinUrl} size={280} level="H" includeMargin={true} />
                                 <div className="host-qr-hint">Scan to Join</div>
                             </div>
                         </div>
 
-                        {/* Text Info Section */}
                         <div className="host-waiting-content">
                             <h1 className="host-room-code">{roomCode}</h1>
                             <p className="host-room-label">Room PIN</p>
-
-                            <div className="host-join-url">
-                                <span>{joinUrl}</span>
-                            </div>
-
+                            <div className="host-join-url"><span>{joinUrl}</span></div>
                             <div className="host-player-count">
                                 <Users size={24} />
                                 <span className="host-player-number">{room?.playersConnected || 0}</span>
                                 <span className="host-player-label">connected</span>
                             </div>
-
-                            <button
-                                onClick={handleStart}
-                                className="btn btn-primary btn-large host-start-btn"
-                                disabled={!room || room.playersConnected === 0}
-                            >
+                            <button onClick={handleStart} className="btn btn-primary btn-large host-start-btn" disabled={!room || room.playersConnected === 0}>
                                 <Play size={22} />
                                 <span>Start Activity</span>
                             </button>
                         </div>
                     </div>
                 </div>
+                <HostToolbar title={quiz.title} toggleFullscreen={toggleFullscreen} />
+            </div>
+        );
+    }
 
-                <div className="host-toolbar">
-                    <span className="host-toolbar-title">{quiz.title}</span>
-                    <div className="host-toolbar-actions">
-                        <button onClick={toggleFullscreen} className="btn btn-secondary btn-icon" title="Fullscreen">
-                            <Maximize size={18} />
+    // LEADERBOARD STATE
+    if (room.status === 'leaderboard') {
+        return (
+            <div className="host-page animate-fade-in">
+                <div className="host-leaderboard-view">
+                    <div className="host-leaderboard-container">
+                        <Trophy size={64} className="host-leaderboard-trophy" />
+                        <h1 className="host-leaderboard-title">Leaderboard</h1>
+                        <div className="host-leaderboard-list">
+                            {sortedLeaderboard.map((player, idx) => (
+                                <div key={player.id} className="host-leaderboard-item" style={{ animationDelay: `${idx * 0.1}s` }}>
+                                    <span className="host-leaderboard-rank">{idx + 1}</span>
+                                    <span className="host-leaderboard-name">{player.nickname}</span>
+                                    <span className="host-leaderboard-points">{player.points} pts</span>
+                                </div>
+                            ))}
+                            {sortedLeaderboard.length === 0 && <p className="text-muted">No scores yet</p>}
+                        </div>
+                        <button onClick={handleNext} className="btn btn-primary btn-large mt-8">
+                            <span>Next Question</span>
+                            <ChevronRight size={20} />
                         </button>
                     </div>
                 </div>
+                <HostToolbar title={quiz.title} toggleFullscreen={toggleFullscreen} />
             </div>
         );
     }
@@ -136,19 +151,28 @@ export default function Host() {
                 <div className="host-finished">
                     <div className="host-finished-content">
                         <CheckCircle size={64} className="host-finished-icon" />
-                        <h1>Activity Finished</h1>
-                        <p className="text-muted">{quiz.questions.length} questions completed</p>
+                        <h1>Final Results</h1>
+                        <div className="host-final-podium">
+                            {sortedLeaderboard.slice(0, 3).map((player, idx) => (
+                                <div key={player.id} className="host-podium-item">
+                                    <div className={`host-podium-bar rank-${idx + 1}`} style={{ height: `${100 - idx * 20}%` }}>
+                                        <span className="host-podium-rank">{idx + 1}</span>
+                                    </div>
+                                    <span className="host-podium-name">{player.nickname}</span>
+                                    <span className="host-podium-score">{player.points}</span>
+                                </div>
+                            ))}
+                        </div>
                         <div className="host-finished-actions">
                             <button onClick={handleRestart} className="btn btn-primary btn-large">
                                 <RotateCcw size={20} />
-                                <span>New Session</span>
+                                <span>Play Again</span>
                             </button>
-                            <button onClick={() => navigate('/')} className="btn btn-secondary btn-large">
-                                Exit
-                            </button>
+                            <button onClick={() => navigate('/')} className="btn btn-secondary btn-large">Exit</button>
                         </div>
                     </div>
                 </div>
+                <HostToolbar title={quiz.title} toggleFullscreen={toggleFullscreen} />
             </div>
         );
     }
@@ -157,37 +181,48 @@ export default function Host() {
     const currentQuestion = quiz.questions[room.currentQuestionIndex];
     const totalAnswered = room.answeredPlayerIds.length;
     const maxCount = Math.max(1, ...Object.values(room.aggregatedCountsByOption));
-    const isLastQuestion = room.currentQuestionIndex === quiz.questions.length - 1;
+    const timerPct = room.totalTimer ? (room.timerState / room.totalTimer) * 100 : 0;
 
     return (
         <div className="host-page animate-fade-in">
+            {/* Timer Bar */}
+            <div className="host-timer-bar-container">
+                <div className="host-timer-bar-fill" style={{ width: `${timerPct}%`, backgroundColor: room.timerState < 5 ? '#ef4444' : 'var(--color-primary)' }} />
+            </div>
+
             <div className="host-active">
-                {/* Question Header */}
                 <div className="host-question-header">
-                    <span className="host-question-number">
-                        Question {room.currentQuestionIndex + 1} / {quiz.questions.length}
-                    </span>
+                    <div className="host-question-meta">
+                        <span className="host-question-number">Question {room.currentQuestionIndex + 1} / {quiz.questions.length}</span>
+                        <div className="host-timer-display">
+                            <AlarmClock size={20} />
+                            <span>{room.timerState}s</span>
+                        </div>
+                    </div>
                     <h1 className="host-question-text">{currentQuestion.text}</h1>
                 </div>
 
-                {/* Bar Chart */}
                 <div className="host-chart">
                     {currentQuestion.options.map((opt, idx) => {
                         const count = room.aggregatedCountsByOption[opt.id] || 0;
                         const pct = totalAnswered > 0 ? (count / maxCount) * 100 : 0;
+                        const isCorrect = currentQuestion.correctOptionId === opt.id;
                         const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
                         const color = colors[idx % colors.length];
 
                         return (
-                            <div key={opt.id} className="host-bar-row">
-                                <div className="host-bar-label">{opt.text}</div>
+                            <div key={opt.id} className={`host-bar-row ${isCorrect ? 'is-correct-glow' : ''}`}>
+                                <div className="host-bar-label">
+                                    {opt.text}
+                                    {isCorrect && <CheckCircle size={16} className="ml-2 inline text-success" />}
+                                </div>
                                 <div className="host-bar-track">
                                     <div
                                         className="host-bar-fill"
                                         style={{
                                             width: `${pct}%`,
                                             backgroundColor: color,
-                                            transition: 'width 0.5s ease-out'
+                                            boxShadow: isCorrect ? `0 0 15px ${color}` : 'none'
                                         }}
                                     />
                                 </div>
@@ -197,41 +232,38 @@ export default function Host() {
                     })}
                 </div>
 
-                {/* Status Bar */}
+                {currentQuestion.explanation && (
+                    <div className="host-explanation animate-slide-up">
+                        <strong>Explanation:</strong> {currentQuestion.explanation}
+                    </div>
+                )}
+
                 <div className="host-status-bar">
                     <div className="host-status-left">
                         <Users size={18} />
                         <span>{totalAnswered} / {room.playersConnected} responded</span>
                     </div>
                     <div className="host-status-right">
-                        <button
-                            onClick={handleNext}
-                            className="btn btn-primary btn-large"
-                        >
-                            {isLastQuestion ? (
-                                <>
-                                    <CheckCircle size={20} />
-                                    <span>Finish</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span>Next Question</span>
-                                    <ChevronRight size={20} />
-                                </>
-                            )}
+                        <button onClick={handleNext} className="btn btn-primary btn-large">
+                            <span>Show Leaderboard</span>
+                            <ChevronRight size={20} />
                         </button>
                     </div>
                 </div>
             </div>
+            <HostToolbar title={quiz.title} toggleFullscreen={toggleFullscreen} />
+        </div>
+    );
+}
 
-            {/* Bottom toolbar */}
-            <div className="host-toolbar">
-                <span className="host-toolbar-title">{quiz.title}</span>
-                <div className="host-toolbar-actions">
-                    <button onClick={toggleFullscreen} className="btn btn-secondary btn-icon" title="Fullscreen">
-                        <Maximize size={18} />
-                    </button>
-                </div>
+function HostToolbar({ title, toggleFullscreen }: { title: string, toggleFullscreen: () => void }) {
+    return (
+        <div className="host-toolbar">
+            <span className="host-toolbar-title">{title}</span>
+            <div className="host-toolbar-actions">
+                <button onClick={toggleFullscreen} className="btn btn-secondary btn-icon" title="Fullscreen">
+                    <Maximize size={18} />
+                </button>
             </div>
         </div>
     );

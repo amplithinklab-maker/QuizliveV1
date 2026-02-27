@@ -22,7 +22,8 @@ export const createRoom = (hostSocketId: string, quiz: Quiz): string => {
         currentQuestionIndex: 0,
         timerState: 0,
         answeredPlayerIds: new Set(),
-        aggregatedCountsByOption: {}
+        aggregatedCountsByOption: {},
+        scores: {}
     };
 
     rooms.set(roomCode, newRoom);
@@ -66,6 +67,15 @@ export const addVoter = (roomCode: string) => {
     }
 };
 
+export const joinRoom = (roomCode: string, studentId: string, nickname: string) => {
+    const room = rooms.get(roomCode);
+    if (room) {
+        if (!room.scores[studentId]) {
+            room.scores[studentId] = { points: 0, nickname };
+        }
+    }
+};
+
 export const startQuiz = (roomCode: string) => {
     const room = rooms.get(roomCode);
     const quiz = quizzes.get(roomCode);
@@ -73,27 +83,33 @@ export const startQuiz = (roomCode: string) => {
     if (room && quiz && quiz.questions.length > 0) {
         room.status = 'active';
         room.currentQuestionIndex = 0;
-        resetQuestionState(room, quiz.questions[0].options);
+        resetQuestionState(room, quiz.questions[0]);
     }
 };
 
-export const nextQuestion = (roomCode: string) => {
+export const nextStep = (roomCode: string) => {
     const room = rooms.get(roomCode);
     const quiz = quizzes.get(roomCode);
 
     if (room && quiz) {
-        if (room.currentQuestionIndex < quiz.questions.length - 1) {
-            room.currentQuestionIndex++;
-            resetQuestionState(room, quiz.questions[room.currentQuestionIndex].options);
-        } else {
-            room.status = 'finished';
+        if (room.status === 'active') {
+            room.status = 'leaderboard';
+        } else if (room.status === 'leaderboard') {
+            if (room.currentQuestionIndex < quiz.questions.length - 1) {
+                room.currentQuestionIndex++;
+                room.status = 'active';
+                resetQuestionState(room, quiz.questions[room.currentQuestionIndex]);
+            } else {
+                room.status = 'finished';
+            }
         }
     }
 };
 
 export const recordAnswer = (roomCode: string, studentId: string, optionId: string): boolean => {
     const room = rooms.get(roomCode);
-    if (!room || room.status !== 'active') return false;
+    const quiz = quizzes.get(roomCode);
+    if (!room || !quiz || room.status !== 'active') return false;
 
     if (room.answeredPlayerIds.has(studentId)) {
         return false; // Already answered
@@ -103,24 +119,37 @@ export const recordAnswer = (roomCode: string, studentId: string, optionId: stri
 
     if (room.aggregatedCountsByOption[optionId] !== undefined) {
         room.aggregatedCountsByOption[optionId]++;
-    } else {
-        // Should not happen if initialized properly, but just in case
-        room.aggregatedCountsByOption[optionId] = 1;
+    }
+
+    // Scoring Logic (Kahoot style)
+    const currentQuestion = quiz.questions[room.currentQuestionIndex];
+    if (currentQuestion.correctOptionId === optionId) {
+        const totalTime = currentQuestion.durationSeconds || 30;
+        const timeLeft = Math.max(0, room.timerState);
+        // Base points 1000, half of it is speed based
+        const basePoints = 500;
+        const speedPoints = Math.round((timeLeft / totalTime) * 500);
+        const totalPoints = basePoints + speedPoints;
+
+        if (room.scores[studentId]) {
+            room.scores[studentId].points += totalPoints;
+        }
     }
 
     return true;
 };
 
-const resetQuestionState = (room: RoomState, options: Option[]) => {
+const resetQuestionState = (room: RoomState, question: any) => {
     room.answeredPlayerIds.clear();
     room.aggregatedCountsByOption = {};
-    options.forEach(opt => {
+    question.options.forEach((opt: any) => {
         room.aggregatedCountsByOption[opt.id] = 0;
     });
+    room.timerState = question.durationSeconds || 30;
+    room.totalTimer = question.durationSeconds || 30;
 };
 
 export const serializeRoom = (room: RoomState) => {
-    // Convert Set to array for JSON serialization over socket
     return {
         ...room,
         answeredPlayerIds: Array.from(room.answeredPlayerIds)

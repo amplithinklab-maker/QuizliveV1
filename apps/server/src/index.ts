@@ -10,7 +10,8 @@ import {
     getRoom,
     getQuiz,
     startQuiz,
-    nextQuestion,
+    nextStep,
+    joinRoom,
     recordAnswer,
     serializeRoom
 } from "./store";
@@ -33,6 +34,42 @@ const io = new Server(server, {
     }
 });
 
+// Timer Management
+const roomTimers: Record<string, NodeJS.Timeout> = {};
+
+const stopTimer = (roomCode: string) => {
+    if (roomTimers[roomCode]) {
+        clearInterval(roomTimers[roomCode]);
+        delete roomTimers[roomCode];
+    }
+};
+
+const startTimer = (roomCode: string) => {
+    stopTimer(roomCode);
+    roomTimers[roomCode] = setInterval(() => {
+        const room = getRoom(roomCode);
+        if (!room) {
+            stopTimer(roomCode);
+            return;
+        }
+
+        if (room.status === 'active' && room.timerState > 0) {
+            room.timerState--;
+            // Broadcast every second
+            io.to(roomCode).emit("room_state_update", serializeRoom(room));
+
+            if (room.timerState <= 0) {
+                // Time's up! Transition to leaderboard
+                nextStep(roomCode);
+                io.to(roomCode).emit("room_state_update", serializeRoom(room));
+                stopTimer(roomCode);
+            }
+        } else {
+            stopTimer(roomCode);
+        }
+    }, 1000);
+};
+
 io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
 
@@ -43,7 +80,6 @@ io.on("connection", (socket) => {
         socket.join(roomCode);
         console.log(`Host ${socket.id} created room ${roomCode}`);
 
-        // Broadcast initial state to host
         const room = getRoom(roomCode);
         if (room) {
             io.to(roomCode).emit("room_state_update", serializeRoom(room));
@@ -56,6 +92,7 @@ io.on("connection", (socket) => {
         const room = getRoom(roomCode);
         if (room && room.hostSocketId === socket.id) {
             startQuiz(roomCode);
+            startTimer(roomCode);
             io.to(roomCode).emit("room_state_update", serializeRoom(getRoom(roomCode)!));
         }
     });
@@ -63,14 +100,20 @@ io.on("connection", (socket) => {
     socket.on("host_next_question", (roomCode: string) => {
         const room = getRoom(roomCode);
         if (room && room.hostSocketId === socket.id) {
-            nextQuestion(roomCode);
-            io.to(roomCode).emit("room_state_update", serializeRoom(getRoom(roomCode)!));
+            nextStep(roomCode);
+            const updatedRoom = getRoom(roomCode);
+            if (updatedRoom && updatedRoom.status === 'active') {
+                startTimer(roomCode);
+            } else {
+                stopTimer(roomCode);
+            }
+            io.to(roomCode).emit("room_state_update", serializeRoom(updatedRoom!));
         }
     });
 
     // --- PLAYER EVENTS ---
 
-    socket.on("player_join", (roomCode: string, callback) => {
+    socket.on("player_join", (roomCode: string, nickname: string, callback: any) => {
         const room = getRoom(roomCode);
         if (!room) {
             if (callback) callback({ success: false, error: "Room not found" });
@@ -80,15 +123,19 @@ io.on("connection", (socket) => {
         socket.join(roomCode);
         addVoter(roomCode);
 
+        // nickname identifier (using socket.id as studentId for simplicity in the session)
+        joinRoom(roomCode, socket.id, nickname);
+
         // Associate this socket with a room for cleanup
         // @ts-ignore
         socket.data.roomCode = roomCode;
+        // @ts-ignore
+        socket.data.nickname = nickname;
 
         io.to(roomCode).emit("room_state_update", serializeRoom(getRoom(roomCode)!));
 
-        // Send quiz data only to the joined player
         const quiz = getQuiz(roomCode);
-        if (callback) callback({ success: true, room: serializeRoom(room), quiz });
+        if (callback) callback({ success: true, room: serializeRoom(room), quiz, studentId: socket.id });
     });
 
     socket.on("player_answer", ({ roomCode, studentId, optionId }) => {
@@ -97,17 +144,14 @@ io.on("connection", (socket) => {
 
         const success = recordAnswer(roomCode, studentId, optionId);
         if (success) {
-            // Debounce this in a real app, for 50 players simple broadcast is fine
             io.to(roomCode).emit("room_state_update", serializeRoom(getRoom(roomCode)!));
         }
     });
 
     // --- DISCONNECT ---
     socket.on("disconnect", () => {
-        // Check if host disconnected
         removeHostRooms(socket.id);
 
-        // Check if player disconnected
         // @ts-ignore
         const joinedRoom = socket.data.roomCode;
         if (joinedRoom) {
