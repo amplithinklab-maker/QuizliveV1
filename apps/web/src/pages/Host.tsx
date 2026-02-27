@@ -3,6 +3,7 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { socket } from '../utils/socket';
 import type { Quiz } from '../types';
 import { Play, ChevronRight, RotateCcw, Maximize, Users, CheckCircle } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface SerializedRoomState {
     roomCode: string;
@@ -68,33 +69,51 @@ export default function Host() {
 
     if (!quiz || !roomCode) return null;
 
+    const joinUrl = `${window.location.origin}${window.location.pathname.includes('/QuizliveV1/') ? '/QuizliveV1' : ''}/#/join/${roomCode}`;
+
     // WAITING STATE
     if (!room || room.status === 'waiting') {
         return (
             <div className="host-page animate-fade-in">
                 <div className="host-waiting">
-                    <div className="host-waiting-content">
-                        <h1 className="host-room-code">{roomCode}</h1>
-                        <p className="host-room-label">Room PIN</p>
-
-                        <div className="host-join-url">
-                            <span>{window.location.origin}/join/{roomCode}</span>
+                    <div className="host-waiting-layout">
+                        {/* QR Code Section */}
+                        <div className="host-qr-section">
+                            <div className="host-qr-card">
+                                <QRCodeSVG
+                                    value={joinUrl}
+                                    size={280}
+                                    level="H"
+                                    includeMargin={true}
+                                />
+                                <div className="host-qr-hint">Scan to Join</div>
+                            </div>
                         </div>
 
-                        <div className="host-player-count">
-                            <Users size={24} />
-                            <span className="host-player-number">{room?.playersConnected || 0}</span>
-                            <span className="host-player-label">connected</span>
-                        </div>
+                        {/* Text Info Section */}
+                        <div className="host-waiting-content">
+                            <h1 className="host-room-code">{roomCode}</h1>
+                            <p className="host-room-label">Room PIN</p>
 
-                        <button
-                            onClick={handleStart}
-                            className="btn btn-primary btn-large host-start-btn"
-                            disabled={!room || room.playersConnected === 0}
-                        >
-                            <Play size={22} />
-                            <span>Start Activity</span>
-                        </button>
+                            <div className="host-join-url">
+                                <span>{joinUrl}</span>
+                            </div>
+
+                            <div className="host-player-count">
+                                <Users size={24} />
+                                <span className="host-player-number">{room?.playersConnected || 0}</span>
+                                <span className="host-player-label">connected</span>
+                            </div>
+
+                            <button
+                                onClick={handleStart}
+                                className="btn btn-primary btn-large host-start-btn"
+                                disabled={!room || room.playersConnected === 0}
+                            >
+                                <Play size={22} />
+                                <span>Start Activity</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
