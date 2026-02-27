@@ -70,6 +70,13 @@ export function parseQuizInput(input: string): Quiz | null {
             if (currentQuestion) {
                 currentQuestion.explanation = line.substring(2).trim();
             }
+        } else if (line.toLowerCase().startsWith('t:')) {
+            if (currentQuestion) {
+                const seconds = parseInt(line.substring(2).trim());
+                if (!isNaN(seconds)) {
+                    currentQuestion.durationSeconds = seconds;
+                }
+            }
         }
     }
 

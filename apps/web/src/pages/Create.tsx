@@ -26,15 +26,26 @@ const INITIAL_QUIZ: Quiz = {
 };
 
 export default function Create() {
-    const [mode, setMode] = useState<'visual' | 'code'>('visual');
+    const [mode, setMode] = useState<'visual' | 'smart'>('visual');
     const [quiz, setQuiz] = useState<Quiz>(() => {
         const saved = localStorage.getItem('livequiz_draft');
         return saved ? JSON.parse(saved) : INITIAL_QUIZ;
     });
-    const [inputRaw, setInputRaw] = useState('');
+    const [importText, setImportText] = useState('');
+    const [previewQuiz, setPreviewQuiz] = useState<Quiz | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+
+    // Live preview for smart import
+    useEffect(() => {
+        if (mode === 'smart' && importText.trim()) {
+            const parsed = parseQuizInput(importText);
+            setPreviewQuiz(parsed);
+        } else {
+            setPreviewQuiz(null);
+        }
+    }, [importText, mode]);
 
     // Autosave
     useEffect(() => {
@@ -43,24 +54,13 @@ export default function Create() {
 
     const handleStart = () => {
         setError(null);
-        let finalQuiz = quiz;
-
-        if (mode === 'code') {
-            const parsed = parseQuizInput(inputRaw);
-            if (!parsed) {
-                setError("Could not parse the input. Please ensure it's valid JSON or structured text.");
-                return;
-            }
-            finalQuiz = parsed;
-        }
-
-        if (finalQuiz.questions.length === 0) {
+        if (quiz.questions.length === 0) {
             setError("Quiz must have at least one question.");
             return;
         }
 
-        // Validate that all questions have at least one option and a correct one marked (optional but recommended)
-        const invalidQuestion = finalQuiz.questions.find(q => q.options.length < 2);
+        // Validate that all questions have at least one option and a correct one marked
+        const invalidQuestion = quiz.questions.find(q => q.options.length < 2);
         if (invalidQuestion) {
             setError(`Question "${invalidQuestion.text}" must have at least 2 options.`);
             return;
@@ -72,30 +72,33 @@ export default function Create() {
             setError("The server is taking too long to respond. Please check the connection.");
         }, 15000);
 
-        socket.emit('host_create_room', finalQuiz, (response: any) => {
+        socket.emit('host_create_room', quiz, (response: any) => {
             clearTimeout(timeoutId);
             setLoading(false);
             if (response.success) {
-                navigate(`/host/${response.roomCode}`, { state: { quiz: finalQuiz } });
+                navigate(`/host/${response.roomCode}`, { state: { quiz } });
             } else {
                 setError("Failed to create room. Please try again.");
             }
         });
     };
 
-    const switchToCode = () => {
-        setInputRaw(JSON.stringify(quiz, null, 2));
-        setMode('code');
+    const handleImportReplace = () => {
+        if (previewQuiz) {
+            setQuiz(previewQuiz);
+            setMode('visual');
+            setImportText('');
+        }
     };
 
-    const switchToVisual = () => {
-        const parsed = parseQuizInput(inputRaw);
-        if (parsed) {
-            setQuiz(parsed);
+    const handleImportAppend = () => {
+        if (previewQuiz) {
+            setQuiz({
+                ...quiz,
+                questions: [...quiz.questions, ...previewQuiz.questions]
+            });
             setMode('visual');
-            setError(null);
-        } else {
-            setError("Cannot switch back: Invalid code format. Fix the syntax first.");
+            setImportText('');
         }
     };
 
@@ -165,21 +168,21 @@ export default function Create() {
                 <div className="mode-toggle">
                     <button
                         className={`mode-btn ${mode === 'visual' ? 'active' : ''}`}
-                        onClick={mode === 'code' ? switchToVisual : undefined}
+                        onClick={() => setMode('visual')}
                     >
                         <FileText size={16} />
                         <span>Visual Editor</span>
                     </button>
                     <button
-                        className={`mode-btn ${mode === 'code' ? 'active' : ''}`}
-                        onClick={mode === 'visual' ? switchToCode : undefined}
+                        className={`mode-btn ${mode === 'smart' ? 'active' : ''}`}
+                        onClick={() => setMode('smart')}
                     >
                         <Code2 size={16} />
-                        <span>Power Mode (Code)</span>
+                        <span>Smart Import</span>
                     </button>
                 </div>
 
-                <button onClick={handleStart} className="btn btn-primary" disabled={loading}>
+                <button onClick={handleStart} className="btn btn-primary" disabled={loading || quiz.questions.length === 0}>
                     <Play size={18} />
                     <span>{loading ? '...' : 'Create & Present'}</span>
                 </button>
@@ -285,16 +288,66 @@ export default function Create() {
                         </button>
                     </div>
                 ) : (
-                    <div className="code-editor-view">
-                        <textarea
-                            className="code-textarea"
-                            value={inputRaw}
-                            onChange={(e) => setInputRaw(e.target.value)}
-                            spellCheck={false}
-                            placeholder="Enter JSON or Markdown-like structure..."
-                        />
-                        <div className="code-help">
-                            <p>Tip: You can paste structured text (Q: text, - option, * correct) or full JSON.</p>
+                    <div className="smart-import-view">
+                        <div className="import-layout">
+                            <div className="import-source">
+                                <div className="import-area-header">
+                                    <h3>Paste Text Here</h3>
+                                    <div className="format-guide">
+                                        <span>Use <b>*</b> for correct answer, <b>T:</b> for time, <b>E:</b> for explanation</span>
+                                    </div>
+                                </div>
+                                <textarea
+                                    className="import-textarea"
+                                    value={importText}
+                                    onChange={(e) => setImportText(e.target.value)}
+                                    spellCheck={false}
+                                    placeholder={`Title: My Awesome Quiz\n\nQ: What is 2+2?\n* 4\n- 5\n- 3\nT: 10\nE: Basic math addition.`}
+                                />
+                            </div>
+
+                            <div className="import-preview">
+                                <div className="preview-header">
+                                    <h3>Detected Questions ({previewQuiz?.questions.length || 0})</h3>
+                                    <div className="import-actions">
+                                        <button
+                                            className="btn btn-secondary btn-sm"
+                                            disabled={!previewQuiz}
+                                            onClick={handleImportAppend}
+                                        >
+                                            Append to Current
+                                        </button>
+                                        <button
+                                            className="btn btn-primary btn-sm"
+                                            disabled={!previewQuiz}
+                                            onClick={handleImportReplace}
+                                        >
+                                            Replace Everything
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="preview-scroll">
+                                    {!previewQuiz && <div className="empty-preview">Start typing or paste from ChatGPT...</div>}
+                                    {previewQuiz?.questions.map((q, idx) => (
+                                        <div key={idx} className="preview-q-card">
+                                            <div className="preview-q-text">{q.text || "(No text detected)"}</div>
+                                            <div className="preview-options">
+                                                {q.options.map((opt, oIdx) => (
+                                                    <div key={oIdx} className={`preview-opt ${q.correctOptionId === (opt as any).id || (opt as any)._isCorrect ? 'is-correct' : ''}`}>
+                                                        {q.correctOptionId === (opt as any).id || (opt as any)._isCorrect ? <CheckCircle2 size={12} /> : <span>- </span>}
+                                                        {opt.text}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="preview-meta">
+                                                <span><Clock size={12} /> {q.durationSeconds}s</span>
+                                                {q.explanation && <span className="text-success"><FileText size={12} /> Expl.</span>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
