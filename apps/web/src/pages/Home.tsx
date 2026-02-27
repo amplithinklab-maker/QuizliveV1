@@ -53,6 +53,9 @@ export default function Home() {
                     <span>Create Activity (Host)</span>
                 </button>
             </div>
+            <footer className="footer-credits">
+                Con cariño, Italo
+            </footer>
         </div>
     );
 }

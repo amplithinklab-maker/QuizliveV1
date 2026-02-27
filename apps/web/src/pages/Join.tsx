@@ -201,6 +201,9 @@ export default function Join() {
                         ))}
                     </div>
                 </div>
+                <footer className="footer-credits">
+                    Con cariño, Italo
+                </footer>
             </div>
         );
     }

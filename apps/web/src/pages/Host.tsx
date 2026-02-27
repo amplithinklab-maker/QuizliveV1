@@ -247,6 +247,7 @@ function HostToolbar({ title, toggleFullscreen }: { title: string, toggleFullscr
     return (
         <div className="host-toolbar">
             <span className="host-toolbar-title">{title}</span>
+            <div className="host-toolbar-credits">Con cariño, Italo</div>
             <div className="host-toolbar-actions">
                 <button onClick={toggleFullscreen} className="btn btn-secondary btn-icon" title="Fullscreen">
                     <Maximize size={18} />
