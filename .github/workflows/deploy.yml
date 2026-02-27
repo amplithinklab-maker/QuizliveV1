@@ -25,11 +25,9 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-        working-directory: ./apps/web
 
       - name: Build
-        run: npm run build
-        working-directory: ./apps/web
+        run: npm run build -w web
         env:
           VITE_SERVER_URL: ${{ vars.VITE_SERVER_URL }}
 
